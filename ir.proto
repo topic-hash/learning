@@ -1,0 +1,207 @@
+syntax = "proto3";
+
+package ir;
+
+// Eine Intermediate Representation für einen einfachen Compiler
+
+// Grundlegende Datentypen
+enum DataType {
+  DATA_TYPE_UNSPECIFIED = 0;
+  DATA_TYPE_INT8 = 1;
+  DATA_TYPE_INT16 = 2;
+  DATA_TYPE_INT32 = 3;
+  DATA_TYPE_INT64 = 4;
+  DATA_TYPE_UINT8 = 5;
+  DATA_TYPE_UINT16 = 6;
+  DATA_TYPE_UINT32 = 7;
+  DATA_TYPE_UINT64 = 8;
+  DATA_TYPE_FLOAT32 = 9;
+  DATA_TYPE_FLOAT64 = 10;
+  DATA_TYPE_BOOL = 11;
+  DATA_TYPE_STRING = 12;
+  DATA_TYPE_POINTER = 13;
+}
+
+// Ein Wert (Literal oder Variable)
+message Value {
+  string name = 1;
+  DataType type = 2;
+  
+  oneof value_kind {
+    int64 int_value = 3;
+    double float_value = 4;
+    bool bool_value = 5;
+    string string_value = 6;
+    string reference = 7;  // Referenz auf eine andere Variable
+  }
+}
+
+// Arithmetische und logische Operationen
+enum BinaryOp {
+  BINARY_OP_UNSPECIFIED = 0;
+  BINARY_OP_ADD = 1;
+  BINARY_OP_SUB = 2;
+  BINARY_OP_MUL = 3;
+  BINARY_OP_DIV = 4;
+  BINARY_OP_MOD = 5;
+  BINARY_OP_AND = 6;
+  BINARY_OP_OR = 7;
+  BINARY_OP_XOR = 8;
+  BINARY_OP_SHL = 9;
+  BINARY_OP_SHR = 10;
+  BINARY_OP_EQ = 11;
+  BINARY_OP_NE = 12;
+  BINARY_OP_LT = 13;
+  BINARY_OP_LE = 14;
+  BINARY_OP_GT = 15;
+  BINARY_OP_GE = 16;
+}
+
+// Unäre Operationen
+enum UnaryOp {
+  UNARY_OP_UNSPECIFIED = 0;
+  UNARY_OP_NEG = 1;
+  UNARY_OP_NOT = 2;
+  UNARY_OP_LOGICAL_NOT = 3;
+}
+
+// Eine einzelne Instruktion
+message Instruction {
+  string id = 1;  // Eindeutige ID der Instruktion
+  
+  oneof instruction_kind {
+    Assignment assignment = 2;
+    BinaryOperation binary_op = 3;
+    UnaryOperation unary_op = 4;
+    CallOperation call = 5;
+    JumpOperation jump = 6;
+    ConditionalJump conditional_jump = 7;
+    ReturnOperation return_op = 8;
+    PhiOperation phi = 9;
+    LoadOperation load = 10;
+    StoreOperation store = 11;
+    AllocaOperation alloca = 12;
+  }
+}
+
+// Zuweisung: dest = value
+message Assignment {
+  string dest = 1;
+  Value value = 2;
+}
+
+// Binäre Operation: dest = left op right
+message BinaryOperation {
+  string dest = 1;
+  BinaryOp op = 2;
+  string left = 3;   // Referenz auf linke Operand
+  string right = 4;  // Referenz auf rechte Operand
+}
+
+// Unäre Operation: dest = op operand
+message UnaryOperation {
+  string dest = 1;
+  UnaryOp op = 2;
+  string operand = 3;
+}
+
+// Funktionsaufruf: dest = call function(args)
+message CallOperation {
+  string dest = 1;
+  string callee = 2;
+  repeated string arguments = 3;
+}
+
+// Sprung: jump target_block
+message JumpOperation {
+  string target_block = 1;
+}
+
+// Bedingter Sprung: if condition then true_block else false_block
+message ConditionalJump {
+  string condition = 1;
+  string true_block = 2;
+  string false_block = 3;
+}
+
+// Rückgabe: return value
+message ReturnOperation {
+  string value = 1;
+}
+
+// Phi-Funktion (für SSA-Form): dest = φ([val1, block1], [val2, block2], ...)
+message PhiOperation {
+  string dest = 1;
+  DataType type = 2;
+  
+  message PhiInput {
+    string value = 1;
+    string from_block = 2;
+  }
+  
+  repeated PhiInput inputs = 3;
+}
+
+// Ladeoperation: dest = load address
+message LoadOperation {
+  string dest = 1;
+  string address = 2;
+}
+
+// Speicheroperation: store value to address
+message StoreOperation {
+  string value = 1;
+  string address = 2;
+}
+
+// Alloca: allokiert Speicher auf dem Stack
+message AllocaOperation {
+  string dest = 1;
+  DataType type = 2;
+  int32 array_size = 3;  // Optional: für Arrays, 1 für Skalare
+}
+
+// Ein Basisblock (Basic Block)
+message BasicBlock {
+  string id = 1;
+  string label = 2;  // Optionales Label für den Block
+  repeated Instruction instructions = 3;
+  
+  // Terminatoren (die letzte Instruktion eines Blocks)
+  oneof terminator {
+    JumpOperation jump = 4;
+    ConditionalJump conditional_jump = 5;
+    ReturnOperation return_op = 6;
+  }
+}
+
+// Funktionsparameter
+message FunctionParameter {
+  string name = 1;
+  DataType type = 2;
+}
+
+// Eine Funktion
+message Function {
+  string name = 1;
+  DataType return_type = 2;
+  repeated FunctionParameter parameters = 3;
+  repeated BasicBlock blocks = 4;
+  bool is_external = 5;  // true wenn nur deklariert, nicht definiert
+}
+
+// Globale Variable
+message GlobalVariable {
+  string name = 1;
+  DataType type = 2;
+  Value initial_value = 3;
+  bool is_constant = 4;
+}
+
+// Das gesamte IR-Modul
+message Module {
+  string name = 1;
+  string source_file = 2;
+  repeated Function functions = 3;
+  repeated GlobalVariable globals = 4;
+}
