@@ -1,4 +1,4 @@
 ```
 # Build artifacts
-*.pdf
+# *.pdf (removed to allow benchmark reports)
 ```
